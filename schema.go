@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hwcer/logger"
 	"reflect"
-	"strings"
 )
 
 // ErrUnsupportedDataType unsupported data type
@@ -35,7 +35,8 @@ func (schema *Schema) New() reflect.Value {
 	return results
 }
 
-func (schema *Schema) MakeSlice() reflect.Value {
+// Make Make a Slice
+func (schema *Schema) Make() reflect.Value {
 	slice := reflect.MakeSlice(reflect.SliceOf(reflect.PtrTo(schema.ModelType)), 0, 20)
 	results := reflect.New(slice.Type())
 	results.Elem().Set(slice)
@@ -52,63 +53,123 @@ func (schema *Schema) LookUpField(name string) *Field {
 	return nil
 }
 
-// FieldDBName 查询对象字段对应的DBName
-func (schema *Schema) FieldDBName(name string) string {
-	if field := schema.LookUpField(name); field != nil {
-		return field.DBName
-	}
-	return ""
-}
+// ReflectValueOf 获取i中的一个字段
+// key 字段名,可以使用(a.b.c)模式递归查找
+//
+//	func (schema *Schema) ReflectValueOf(v reflect.Value, key string) (r reflect.Value, field *Field) {
+//		index := strings.Index(key, ".")
+//		if index < 0 {
+//			if field = schema.LookUpField(key); field != nil {
+//				r = field.ReflectValueOf(v)
+//			}
+//			return
+//		}
+//		if field = schema.LookUpField(key[0:index]); field == nil {
+//			return
+//		}
+//
+//		fmt.Printf("================================\nFieldName:%v\n", field.Name)
+//		fmt.Printf("FieldType:%v\n", field.FieldType.Kind())
+//		fmt.Printf("IndirectFieldType:%v\n", field.IndirectFieldType.Kind())
+//		switch field.IndirectFieldType.Kind() {
+//		case reflect.Struct:
+//			r = field.Get(v)
+//			return field.Embedded.ReflectValueOf(r, key[index+1:])
+//		default:
+//			field = nil
+//			fmt.Printf("子类型不正确无法继续递归\n")
+//			return
+//		}
+//
+//		return
+//	}
 
-func (schema *Schema) GetValue(i interface{}, key string) interface{} {
-	field := schema.LookUpField(key)
+func (schema *Schema) GetValue(value any, keys ...any) (r any) {
+	vf := ValueOf(value)
+	n := len(keys)
+	if n == 0 {
+		return
+	}
+	k := ToString(keys[0])
+	field := schema.LookUpField(k)
 	if field == nil {
-		return nil
+		return
 	}
-	vf := reflect.Indirect(ValueOf(i))
-	val := vf.FieldByIndex(field.StructField.Index)
-
-	if val.IsValid() && !val.IsZero() {
-		return val.Interface()
-	}
-	return nil
+	v := field.Get(vf)
+	return schema.Getter(v, keys[1:]...)
 }
 
-func (schema *Schema) SetValue(i any, key string, val any) (err error) {
+func (schema *Schema) SetValue(value any, val any, keys ...any) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
 		}
 	}()
-	if index := strings.Index(key, "."); index > 0 {
-		b := schema.convert(key, val)
-		err = json.Unmarshal(b, i)
-		return
+	if len(keys) == 1 {
+		k := ToString(keys[0])
+		field := schema.LookUpField(k)
+		if field == nil {
+			return fmt.Errorf("field not exist:%v", k)
+		}
+		return field.Set(ValueOf(value), val)
 	}
-
-	field := schema.LookUpField(key)
-	if field == nil {
-		return fmt.Errorf("field not exist:%v", key)
-	}
-	reflectValue := reflect.ValueOf(i)
-	return field.Set(reflectValue, val)
+	b := schema.convert(val, keys...)
+	logger.Trace("convert:%v", string(b))
+	err = json.Unmarshal(b, value)
+	return
 }
 
 // a.b.c = v 转换成{"a":{"b":{"c":v}}}
-func (schema *Schema) convert(key string, val any) []byte {
-	arr := strings.Split(key, ".")
+func (schema *Schema) convert(val any, keys ...any) []byte {
 	data := map[string]any{}
 	var node map[string]any
-	n := len(arr) - 1
-	for i, k := range arr {
+	n := len(keys) - 1
+	for i, k := range keys {
+		sk := ToString(k)
 		if i == n {
-			node[k] = val
+			node[sk] = val
 		} else {
 			node = map[string]any{}
-			data[k] = node
+			data[sk] = node
 		}
 	}
 	b, _ := json.Marshal(data)
 	return b
 
+}
+
+func (schema *Schema) ParseField(fieldStruct reflect.StructField) *Field {
+	//var err error
+
+	field := &Field{
+		Name:              fieldStruct.Name,
+		FieldType:         fieldStruct.Type,
+		IndirectFieldType: fieldStruct.Type,
+		StructField:       fieldStruct,
+		Schema:            schema,
+	}
+
+	for field.IndirectFieldType.Kind() == reflect.Ptr {
+		field.IndirectFieldType = field.IndirectFieldType.Elem()
+	}
+
+	fieldValue := reflect.New(field.IndirectFieldType)
+	if dbName := fieldStruct.Tag.Get("bson"); dbName != "" && dbName != "inline" {
+		field.DBName = dbName
+	}
+	field.Index = field.StructField.Index
+	kind := reflect.Indirect(fieldValue).Kind()
+	switch kind {
+	case reflect.Struct:
+		field.Embedded, schema.err = GetOrParse(fieldValue.Interface(), schema.options)
+	case reflect.Map, reflect.Slice, reflect.Array:
+		//初始化子结构
+	case reflect.Invalid, reflect.Uintptr, reflect.Chan, reflect.Func, reflect.Interface, reflect.UnsafePointer, reflect.Complex64, reflect.Complex128:
+		//schema.err = fmt.Errorf("invalid embedded struct for %s's field %s, should be struct, but got %v", field.Schema.Name, field.Name, field.FieldType)
+	}
+
+	//if fieldStruct.Anonymous {
+	//
+	//}
+	return field
 }
