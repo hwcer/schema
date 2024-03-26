@@ -1,8 +1,7 @@
 package schema
 
 import (
-	"errors"
-	"go.mongodb.org/mongo-driver/bson"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -44,17 +43,6 @@ func ToArray(v interface{}) (r []interface{}) {
 	return
 }
 
-func ToBson(i interface{}) (bson.M, error) {
-	switch i.(type) {
-	case map[string]interface{}:
-		return bson.M(i.(map[string]interface{})), nil
-	case bson.M:
-		return i.(bson.M), nil
-	default:
-		return nil, errors.New("convert error")
-	}
-}
-
 func ToString(value interface{}) string {
 	switch v := value.(type) {
 	case string:
@@ -79,8 +67,44 @@ func ToString(value interface{}) string {
 		return strconv.FormatUint(uint64(v), 10)
 	case uint64:
 		return strconv.FormatUint(v, 10)
+	default:
+		return fmt.Sprintf("%v", value)
 	}
-	return ""
+}
+
+func ToInt(i any) (r int64) {
+	switch v := i.(type) {
+	case int:
+		r = int64(v)
+	case uint:
+		r = int64(v)
+	case int8:
+		r = int64(v)
+	case uint8:
+		r = int64(v)
+	case int16:
+		r = int64(v)
+	case uint16:
+		r = int64(v)
+	case int32:
+		r = int64(v)
+	case uint32:
+		r = int64(v)
+	case int64:
+		r = v
+	case uint64:
+		r = int64(v)
+	case float32:
+		r = int64(v)
+	case float64:
+		r = int64(v)
+	case string:
+		r, _ = strconv.ParseInt(v, 10, 64)
+	}
+	return
+}
+func ToInt32(i any) int32 {
+	return int32(ToInt(i))
 }
 
 func ParseTagSetting(str string, sep string) map[string]string {

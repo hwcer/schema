@@ -165,7 +165,7 @@ func (schema *Schema) parseFieldIndexes(field *Field, table string) (indexes []*
 		return
 	}
 	fieldValue := reflect.New(field.IndirectFieldType)
-	fieldSchema, err := getOrParse(fieldValue.Interface(), schema.options)
+	fieldSchema, err := GetOrParse(fieldValue.Interface(), schema.options)
 	if err != nil {
 		logger.Error("Schema parseFieldIndexes:%v", err)
 		return
