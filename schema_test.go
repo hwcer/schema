@@ -29,6 +29,7 @@ type Human struct {
 func TestSchema_GetValue(t *testing.T) {
 	h := &Human{Sex: &Sex{}}
 	h.Y = 2
+	h.Args = make(map[string]any)
 	sch, _ := Parse(h)
 	err := sch.SetValue(h, 2, "sex", "hair")
 	if err != nil {
@@ -46,4 +47,13 @@ func TestSchema_GetValue(t *testing.T) {
 		t.Logf("result:%v", string(b))
 	}
 
+	err = sch.SetValue(h, 200, "Args", "val")
+	if err != nil {
+		t.Logf("error:%v", err)
+	} else {
+		b, _ := json.Marshal(h)
+		t.Logf("result:%v", string(b))
+	}
+
+	t.Logf("get sex.Hair:%v", sch.GetValue(h, "sex", "hair"))
 }
