@@ -1,15 +1,14 @@
 package schema
 
 import (
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/hwcer/logger"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -167,7 +166,7 @@ func (schema *Schema) parseFieldIndexes(field *Field, table string) (indexes []*
 	fieldValue := reflect.New(field.IndirectFieldType)
 	fieldSchema, err := GetOrParse(fieldValue.Interface(), schema.options)
 	if err != nil {
-		logger.Error("Schema parseFieldIndexes:%v", err)
+		fmt.Printf("Schema parseFieldIndexes:%v", err)
 		return
 	}
 	fieldTable := strings.Join([]string{table, field.DBName}, "_")
