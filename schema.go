@@ -57,7 +57,8 @@ func (schema *Schema) LookUpField(name string) *Field {
 	return nil
 }
 
-func (schema *Schema) GetValue(obj any, keys ...any) (r any) {
+func (schema *Schema) GetValue(obj any, key string, keys ...any) (r any) {
+	keys = append([]any{key}, keys...)
 	vf := ValueOf(obj)
 	var sch *Schema
 	var field *Field
@@ -84,12 +85,13 @@ func (schema *Schema) GetValue(obj any, keys ...any) (r any) {
 	return vf.Interface()
 }
 
-func (schema *Schema) SetValue(obj any, val any, keys ...any) (err error) {
+func (schema *Schema) SetValue(obj any, key string, val any, keys ...any) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
 		}
 	}()
+	keys = append([]any{key}, keys...)
 	vf := ValueOf(obj)
 	var sch *Schema
 	var field *Field
