@@ -1,11 +1,9 @@
 package schema
 
 import (
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -160,22 +158,22 @@ func (schema *Schema) parseFieldIndexes(field *Field, table string) (indexes []*
 		}
 	}
 	//递归子对象
-	if field.IndirectFieldType.Kind() != reflect.Struct {
-		return
-	}
-	fieldValue := reflect.New(field.IndirectFieldType)
-	fieldSchema, err := GetOrParse(fieldValue.Interface(), schema.options)
-	if err != nil {
-		fmt.Printf("Schema parseFieldIndexes:%v", err)
-		return
-	}
-	fieldTable := strings.Join([]string{table, field.DBName}, "_")
-	for _, v := range fieldSchema.Fields {
-		for _, index := range fieldSchema.parseFieldIndexes(v, fieldTable) {
-			index.DBName = append([]string{field.DBName}, index.DBName...)
-			indexes = append(indexes, index)
-		}
-	}
+	//if field.IndirectFieldType.Kind() != reflect.Struct {
+	//	return
+	//}
+	//fieldValue := reflect.New(field.IndirectFieldType)
+	//fieldSchema, err := GetOrParse(fieldValue.Interface(), schema.options)
+	//if err != nil {
+	//	fmt.Printf("Schema parseFieldIndexes:%v", err)
+	//	return
+	//}
+	//fieldTable := strings.Join([]string{table, field.DBName}, "_")
+	//for _, v := range fieldSchema.fieldsPrivate {
+	//	for _, index := range fieldSchema.parseFieldIndexes(v, fieldTable) {
+	//		index.DBName = append([]string{field.DBName}, index.DBName...)
+	//		indexes = append(indexes, index)
+	//	}
+	//}
 
 	return
 }

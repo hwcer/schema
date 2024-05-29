@@ -70,8 +70,8 @@ func ParseWithSpecialTableName(dest interface{}, specialTableName string, opts *
 	schema.Name = modelType.Name()
 	schema.ModelType = modelType
 	schema.Table = tableName
-	schema.FieldsByName = map[string]*Field{}
-	schema.FieldsByDBName = map[string]*Field{}
+	schema.Fields = map[string]*Field{}
+	schema.fieldsDatabase = map[string]*Field{}
 
 	//var embeddedField []*Field
 
@@ -82,12 +82,9 @@ func ParseWithSpecialTableName(dest interface{}, specialTableName string, opts *
 
 			if field.StructField.Anonymous {
 				schema.Embedded = append(schema.Embedded, field)
-				//if field.Embedded != nil {
-				//	embeddedField = append(embeddedField, field)
-				//}
 			} else {
-				schema.Fields = append(schema.Fields, field)
-				schema.FieldsByName[field.Name] = field
+				schema.fieldsPrivate = append(schema.fieldsPrivate, field)
+				schema.Fields[field.Name] = field
 			}
 		}
 		if schema.err != nil {
@@ -95,36 +92,19 @@ func ParseWithSpecialTableName(dest interface{}, specialTableName string, opts *
 		}
 	}
 	//所有Anonymous字段
-	//ignore := map[string]*Field{} //忽略字段,在多个继承对象中出现
-	//anonymous := map[string]*Field{}
 
 	for _, v := range schema.Embedded {
 		for _, field := range v.GetEmbeddedFields() {
-			if _, ok := schema.FieldsByName[field.Name]; !ok {
-				schema.FieldsByName[field.Name] = field
+			if _, ok := schema.Fields[field.Name]; !ok {
+				schema.Fields[field.Name] = field
 			}
-			//if _, ok := ignore[field.Name]; !ok {
-			//	if _, ok2 := anonymous[field.Name]; !ok2 {
-			//		anonymous[field.Name] = field
-			//	} else {
-			//		ignore[field.Name] = field
-			//		delete(anonymous, field.Name)
-			//	}
-			//}
 		}
 	}
 
-	//for _, field := range anonymous {
-	//	if _, ok := schema.FieldsByName[field.Name]; !ok {
-	//		schema.FieldsByName[field.Name] = field
-	//	}
-	//
-	//}
-
-	for _, field := range schema.FieldsByName {
+	for _, field := range schema.Fields {
 		if field.DBName != "" {
-			if f, ok := schema.FieldsByDBName[field.DBName]; !ok {
-				schema.FieldsByDBName[field.DBName] = field
+			if f, ok := schema.fieldsDatabase[field.DBName]; !ok {
+				schema.fieldsDatabase[field.DBName] = field
 			} else {
 				return nil, fmt.Errorf("struct(%v) DBName repeat: %v,%v", schema.Name, f.Name, field.Name)
 			}

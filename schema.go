@@ -10,16 +10,17 @@ import (
 var ErrUnsupportedDataType = errors.New("unsupported data type")
 
 type Schema struct {
-	err            error
-	init           chan struct{}
+	err  error
+	init chan struct{}
+
 	options        *Options
 	Name           string
 	Table          string
-	Fields         []*Field
 	Embedded       []*Field //嵌入字段
 	ModelType      reflect.Type
-	FieldsByName   map[string]*Field
-	FieldsByDBName map[string]*Field
+	Fields         map[string]*Field
+	fieldsPrivate  []*Field          //不包含内嵌结构的字段,需要使用所有字段，请使用Schema.Range 或者遍历 FieldsByName FieldsByDBName
+	fieldsDatabase map[string]*Field //数据库字段索引
 }
 
 func (schema *Schema) initialized() {
@@ -47,11 +48,19 @@ func (schema *Schema) Make() reflect.Value {
 	return results
 }
 
+// Range 遍历字段
+func (schema *Schema) Range(cb func(*Field) bool) {
+	for _, field := range schema.fieldsDatabase {
+		if !cb(field) {
+			return
+		}
+	}
+}
 func (schema *Schema) LookUpField(name string) *Field {
-	if field, ok := schema.FieldsByDBName[name]; ok {
+	if field, ok := schema.Fields[name]; ok {
 		return field
 	}
-	if field, ok := schema.FieldsByName[name]; ok {
+	if field, ok := schema.fieldsDatabase[name]; ok {
 		return field
 	}
 	return nil
@@ -85,7 +94,7 @@ func (schema *Schema) GetValue(obj any, key string, keys ...any) (r any) {
 	return vf.Interface()
 }
 
-func (schema *Schema) SetValue(obj any, key string, val any, keys ...any) (err error) {
+func (schema *Schema) SetValue(obj any, val any, key string, keys ...any) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)

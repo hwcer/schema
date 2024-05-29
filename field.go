@@ -22,7 +22,7 @@ func (field *Field) GetEmbeddedFields() (r []*Field) {
 	if !field.StructField.Anonymous || field.Embedded == nil {
 		return
 	}
-	for _, ef := range field.Embedded.FieldsByName {
+	for _, ef := range field.Embedded.Fields {
 		i := *ef
 		v := &i
 		if field.FieldType.Kind() == reflect.Struct {

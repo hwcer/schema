@@ -8,20 +8,20 @@ import (
 var opts = New()
 
 type Member struct {
-	Id    string `json:"_id" bson:"_id" `
-	Name  string `json:"name,omitempty" bson:"name" index:"name:"`
-	Map   map[int32]int32
-	Slice []int32
-	Array [5]Circle
-	Arena Arena
-	*Circle
+	Id      string `json:"_id" bson:"_id" `
+	Name    string `json:"name,omitempty" bson:"name" index:"name:"`
+	Map     map[int32]int32
+	Slice   []int32
+	Array   [5]Circle
+	Arena   Arena
+	*Circle `bson:",inline"`
 }
 
 type Arena struct {
 	Score int32 `json:"score" bson:"score" index:"name:"`
 }
 type Circle struct {
-	Rank  int32
+	Rank  int32 `json:"rank" bson:"rank" index:"name:"`
 	Score int32
 }
 
@@ -57,5 +57,9 @@ func TestIndex(t *testing.T) {
 	b, _ := json.Marshal(role)
 
 	t.Logf("role:%+v", string(b))
+
+	for k, v := range sch.ParseIndexes() {
+		t.Logf("index[%v]:%+v", k, v)
+	}
 
 }
