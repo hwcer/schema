@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type Field struct {
@@ -16,6 +17,17 @@ type Field struct {
 	FieldType         reflect.Type
 	StructField       reflect.StructField
 	IndirectFieldType reflect.Type
+}
+
+func (field *Field) JsonName() string {
+	jsName := field.StructField.Tag.Get("json")
+	if i := strings.Index(jsName, ","); i >= 0 {
+		jsName = jsName[0:i]
+	}
+	if jsName == "" {
+		return field.Name
+	}
+	return jsName
 }
 
 func (field *Field) GetEmbeddedFields() (r []*Field) {
@@ -195,6 +207,9 @@ func (field *Field) SetInt(value reflect.Value, v interface{}) error {
 	case []byte:
 		return field.Set(value, string(data))
 	case string:
+		if data == "" {
+			data = "0"
+		}
 		if i, err := strconv.ParseInt(data, 0, 64); err == nil {
 			field.ReflectValueOf(value).SetInt(i)
 		} else {
@@ -235,6 +250,9 @@ func (field *Field) SetUint(value reflect.Value, v interface{}) error {
 	case []byte:
 		return field.Set(value, string(data))
 	case string:
+		if data == "" {
+			data = "0"
+		}
 		if i, err := strconv.ParseUint(data, 0, 64); err == nil {
 			field.ReflectValueOf(value).SetUint(i)
 		} else {
@@ -275,6 +293,9 @@ func (field *Field) SetFloat(value reflect.Value, v interface{}) error {
 	case []byte:
 		return field.Set(value, string(data))
 	case string:
+		if data == "" {
+			data = "0"
+		}
 		if i, err := strconv.ParseFloat(data, 64); err == nil {
 			field.ReflectValueOf(value).SetFloat(i)
 		} else {
