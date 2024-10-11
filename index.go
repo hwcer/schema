@@ -120,10 +120,7 @@ func (schema *Schema) parseTagIndex(table, field, value string) *IndexField {
 		name = strings.Join([]string{"", "idx", table, field}, "_")
 	}
 
-	priority, err := strconv.Atoi(settings[IndexPriority])
-	if err != nil {
-		priority = 10
-	}
+	priority, _ := strconv.Atoi(settings[IndexPriority])
 	indexField := &IndexField{Name: name, Priority: priority}
 	indexField.Sort = settings[IndexSort]
 	indexField.DBName = []string{field}
